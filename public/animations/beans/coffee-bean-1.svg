@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="80" viewBox="0 0 60 80">
+  <defs>
+    <radialGradient id="beanGrad1" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#8B6914"/>
+      <stop offset="40%" stop-color="#60402D"/>
+      <stop offset="100%" stop-color="#3A2515"/>
+    </radialGradient>
+    <filter id="beanShadow1">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
+      <feOffset dx="1" dy="1"/>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+  <ellipse cx="30" cy="40" rx="22" ry="35" fill="url(#beanGrad1)" transform="rotate(-15,30,40)"/>
+  <path d="M 20 15 Q 30 40, 22 65" stroke="#241710" stroke-width="2.5" fill="none" opacity="0.7" transform="rotate(-15,30,40)"/>
+  <ellipse cx="28" cy="30" rx="8" ry="12" fill="rgba(255,255,255,0.08)" transform="rotate(-20,28,30)"/>
+</svg>
