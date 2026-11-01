@@ -1,36 +1,20 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# True Black Café — Scroll Animation Docs
 
-## Getting Started
+This package contains the implementation brief and supporting specifications for **Phase 1 only**: the cinematic scroll-controlled coffee transformation.
 
-First, run the development server:
+## Files
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- `SCROLL_ANIMATION_MASTER_PROMPT.md` — paste this into Cursor / Claude Code / your coding agent. It directs the agent to inspect the repository, implement the scene, and verify it.
+- `SCROLL_ANIMATION_TECHNICAL_SPEC.md` — exact frame mapping, scroll lifecycle, rendering, caching, and fallback requirements.
+- `FRAME_ASSET_SETUP.md` — where to place the four ZIP parts, expected filenames, and verification steps.
+- `SCROLL_ANIMATION_ACCEPTANCE_CHECKLIST.md` — completion criteria.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Recommended order
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Extract all four frame ZIP parts into `public/coffee-frames/`.
+2. Copy `coffee-frame-manifest.json` into that folder.
+3. Verify there are 480 frame files.
+4. Give your coding agent `SCROLL_ANIMATION_MASTER_PROMPT.md` and ask it to read the other three supporting files.
+5. Ask it to stop after Phase 1 is working. Presenter overlays and chapter storytelling are later phases.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The project’s own `design.md` and `AGENTS.md` (if present) remain authoritative. These documents are scoped only to the scroll animation and do not replace the project's overall design or engineering rules.
