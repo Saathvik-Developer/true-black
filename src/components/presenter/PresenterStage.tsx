@@ -30,7 +30,7 @@ export const PresenterStage: React.FC<PresenterStageProps> = ({
       <div className="relative w-full h-full flex items-end justify-center origin-bottom">
         {CHAPTERS.map((chapter, i) => {
           const opacity = getChapterOpacity(globalProgress, i);
-          if (opacity <= 0.005) return null;
+          const isVisibleInStage = opacity > 0.002;
 
           const config: PresenterImageConfig = PRESENTER_CONFIGS[i] || {
             id: `presenter-${i + 1}`,
@@ -51,6 +51,8 @@ export const PresenterStage: React.FC<PresenterStageProps> = ({
               className="absolute inset-0 flex items-end justify-center pointer-events-none"
               style={{
                 opacity,
+                visibility: isVisibleInStage ? 'visible' : 'hidden',
+                willChange: isVisibleInStage ? 'opacity' : 'auto',
                 filter:
                   'drop-shadow(0 30px 45px rgba(0, 0, 0, 0.92)) drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7))',
               }}

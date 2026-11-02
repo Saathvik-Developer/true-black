@@ -27,6 +27,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preload" as="image" href="/coffee-frames/frame-000001.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/images/presenters/presenter1.png" type="image/png" />
+      </head>
       <body className="min-h-full bg-[#15120F] text-[#F5F0E8] flex flex-col">{children}</body>
     </html>
   );

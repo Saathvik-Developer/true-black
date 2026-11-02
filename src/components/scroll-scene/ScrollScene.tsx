@@ -54,6 +54,43 @@ export const ScrollScene: React.FC = () => {
   const frameSequenceRef = useRef<FrameSequenceHandle | null>(null);
   const updateRafRef = useRef<number | null>(null);
 
+  // Eagerly preload and GPU-decode all presenters and field photos on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Preload all 6 presenters
+    const presenterSrcs = [
+      '/images/presenters/presenter1.png',
+      '/images/presenters/presenter2.png',
+      '/images/presenters/presenter3.png',
+      '/images/presenters/presenter4.png',
+      '/images/presenters/presenter5.png',
+      '/images/presenters/presenter6.png',
+    ];
+
+    presenterSrcs.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+      if (img.decode) {
+        img.decode().catch(() => {});
+      }
+    });
+
+    // 2. Preload chapter field photos
+    CHAPTERS.forEach((ch) => {
+      if (ch.imageSrc) {
+        const img = new Image();
+        img.src = ch.imageSrc;
+        if (img.decode) img.decode().catch(() => {});
+      }
+      if (ch.secondaryImageSrc) {
+        const img = new Image();
+        img.src = ch.secondaryImageSrc;
+        if (img.decode) img.decode().catch(() => {});
+      }
+    });
+  }, []);
+
   // Section Ranges in the continuous scroll timeline:
   // 0.00 - 0.06: Intro
   // 0.06 - 0.66: 6 Chapters

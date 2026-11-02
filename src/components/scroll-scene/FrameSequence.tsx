@@ -40,6 +40,7 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
     const rafIdRef = useRef<number | null>(null);
     const pendingProgressRef = useRef<number | null>(null);
     const isDestroyedRef = useRef<boolean>(false);
+    const isIdleStreamStartedRef = useRef<boolean>(false);
 
     // Evict oldest entries when cache exceeds capacity
     const evictOldest = useCallback(() => {
@@ -103,6 +104,30 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
       },
       [zoom]
     );
+
+    // Find closest loaded frame in cache to keep animation responsive during network fetches
+    const getClosestCachedFrame = useCallback((target: number): { frame: DrawableFrame; index: number } | null => {
+      const cache = cacheRef.current;
+      if (cache.size === 0) return null;
+      if (cache.has(target)) {
+        return { frame: cache.get(target)!, index: target };
+      }
+
+      let closestIdx = -1;
+      let minDiff = Infinity;
+      for (const idx of cache.keys()) {
+        const diff = Math.abs(idx - target);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = idx;
+        }
+      }
+
+      if (closestIdx !== -1 && minDiff <= 32) {
+        return { frame: cache.get(closestIdx)!, index: closestIdx };
+      }
+      return null;
+    }, []);
 
     // Load a single frame via Image element, upgrading to ImageBitmap when possible
     const loadFrame = useCallback(
@@ -175,7 +200,7 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
       [evictOldest]
     );
 
-    // Render loop triggered via rAF
+    // Render loop triggered via rAF with closest-frame fallback
     const renderTargetFrame = useCallback(
       async (index: number) => {
         if (isDestroyedRef.current) return;
@@ -187,10 +212,25 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
           cache.set(index, frame);
           drawFrame(frame, index);
         } else {
-          // Keep last valid frame visible while loading new one
+          // Immediately draw closest cached frame so the canvas never freezes while downloading
+          const closest = getClosestCachedFrame(index);
+          if (closest && (!lastRenderedIndexRef.current || Math.abs(closest.index - index) < Math.abs(lastRenderedIndexRef.current - index))) {
+            drawFrame(closest.frame, closest.index);
+          }
+
+          // Fetch requested frame
           const frame = await loadFrame(index);
-          if (frame && currentFrameIndexRef.current === index && !isDestroyedRef.current) {
-            drawFrame(frame, index);
+          if (frame && !isDestroyedRef.current) {
+            const currentTarget = currentFrameIndexRef.current;
+            const distToCurrent = Math.abs(currentTarget - index);
+            const currentRenderedDist = lastRenderedIndexRef.current !== null
+              ? Math.abs(currentTarget - lastRenderedIndexRef.current)
+              : Infinity;
+
+            // Draw if this newly loaded frame is closer to the current scroll target than what is currently rendered
+            if (distToCurrent <= currentRenderedDist || distToCurrent <= 16) {
+              drawFrame(frame, index);
+            }
           }
         }
 
@@ -224,7 +264,7 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
           }
         }
       },
-      [drawFrame, loadFrame]
+      [drawFrame, getClosestCachedFrame, loadFrame]
     );
 
     // Progress update handler with rAF coalescing
@@ -254,20 +294,61 @@ export const FrameSequence = forwardRef<FrameSequenceHandle, FrameSequenceProps>
       [renderTargetFrame]
     );
 
-    // Initial preload: loads frame 0 and immediate lookaheads
+    // Background progressive idle stream to pre-fill browser HTTP disk cache
+    const startIdleStream = useCallback(() => {
+      if (isIdleStreamStartedRef.current || typeof window === 'undefined') return;
+      isIdleStreamStartedRef.current = true;
+
+      let nextBatchStart = 41;
+      const batchSize = 6;
+
+      const streamNextBatch = () => {
+        if (isDestroyedRef.current || nextBatchStart >= FRAME_COUNT) return;
+
+        const end = Math.min(FRAME_COUNT, nextBatchStart + batchSize);
+        for (let i = nextBatchStart; i < end; i++) {
+          const img = new Image();
+          img.src = getFrameUrl(i);
+        }
+        nextBatchStart = end;
+
+        if (nextBatchStart < FRAME_COUNT) {
+          if ('requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(streamNextBatch, { timeout: 600 });
+          } else {
+            setTimeout(streamNextBatch, 80);
+          }
+        }
+      };
+
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(streamNextBatch, { timeout: 1000 });
+      } else {
+        setTimeout(streamNextBatch, 300);
+      }
+    }, []);
+
+    // Initial preload: loads Tier 1 hero frames (0..40) then triggers idle background stream
     const preloadInitial = useCallback(async () => {
       const initialIdx = progressToFrameIndex(initialProgress);
       const firstFrame = await loadFrame(initialIdx);
       if (firstFrame && !isDestroyedRef.current) {
         drawFrame(firstFrame, initialIdx);
       }
-      // Preload next frames in background
-      for (let i = 1; i <= PRELOAD_AHEAD_WINDOW; i++) {
-        if (initialIdx + i < FRAME_COUNT) {
-          loadFrame(initialIdx + i);
+
+      // Preload immediate tier 1 hero frames (0..40)
+      const tier1Promises: Promise<any>[] = [];
+      for (let i = 1; i <= 40; i++) {
+        const idx = initialIdx + i;
+        if (idx < FRAME_COUNT) {
+          tier1Promises.push(loadFrame(idx));
         }
       }
-    }, [initialProgress, loadFrame, drawFrame]);
+      await Promise.allSettled(tier1Promises);
+
+      // Start idle streaming for all remaining frames
+      startIdleStream();
+    }, [initialProgress, loadFrame, drawFrame, startIdleStream]);
 
     // Cleanup resources
     const destroy = useCallback(() => {
